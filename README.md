@@ -1,6 +1,6 @@
 # Customer Workbench Frontend
 
-Modern React-based frontend for the Customer Insights Workbench application, enabling users to upload customer interaction data and search/filter records.
+Modern React-based frontend for the Customer Insights Workbench application. It provides a file upload UI (CSV/JSON) for customer interaction data and a search/filter UI to view interaction records.
 
 ## Architecture
 
@@ -32,21 +32,21 @@ src/
 
 ### Key Features
 
-#### 1. **Navigation**
-- Clean header with app branding
+#### 1. Navigation
+- Header with app branding
 - Navigation links to Upload and Search pages
 - Active route indicator
 
-#### 2. **Upload Page**
-- Drag-and-drop file upload support
-- CSV and JSON file format support
-- Real-time file validation
-- Upload progress feedback
-- Success/error messages
-- Upload summary display
+#### 2. Upload Page
+- File upload via standard file input (CSV and JSON)
+- Client-side file validation (by MIME type and filename)
+- Simple loading indicator during upload
+- Success/error messages and upload summary
 - Format guide with examples
 
-#### 3. **Search Page**
+> Note: There is currently no drag-and-drop area or byte-level upload progress indicator in the UI. These can be added later if desired.
+
+#### 3. Search Page
 - Multi-criteria filtering:
   - Search by Customer ID
   - Filter by Interaction Type (Email, Chat, Ticket, Feedback)
@@ -62,11 +62,10 @@ src/
 - Loading states
 - Error handling
 
-#### 4. **API Integration**
-- Centralized API client with axios
-- Automatic request/response handling
+#### 4. API Integration
+- Centralized API client using axios, defined in `src/services/api.js`
 - Error handling and user feedback
-- Support for multipart form data uploads
+- Multipart form data uploads for file uploads
 
 ## Setup Instructions
 
@@ -102,46 +101,53 @@ npm run preview
 The frontend communicates with the backend via REST APIs:
 
 ### Upload Endpoint
-```javascript
-POST /api/uploads
-Content-Type: multipart/form-data
 
-Body: file (binary)
+POST /api/uploads (multipart/form-data)
 
-Response:
+Request body: file (binary)
+
+Response example:
+```json
 {
-  "success": boolean,
-  "message": string,
-  "uploadJobId": number,
-  "processedRecords": number,
-  "failedRecords": number
+  "success": true,
+  "message": "Upload processed",
+  "uploadJobId": 123,
+  "processedRecords": 42,
+  "failedRecords": 0
 }
 ```
 
 ### Search Endpoint
-```javascript
+
 GET /api/interactions/search?customerId=CUST-001&interactionType=email&page=0&size=10
 
-Response:
+Response example:
+```json
 {
-  "interactions": [...],
-  "totalElements": number,
-  "totalPages": number,
-  "currentPage": number,
-  "pageSize": number
+  "interactions": [ /* array of interaction objects */ ],
+  "totalElements": 100,
+  "totalPages": 10,
+  "currentPage": 0,
+  "pageSize": 10
 }
 ```
 
 ## Configuration
 
 ### Backend API URL
-Modify the `API_BASE_URL` in `src/services/api.js`:
+The project currently uses a hardcoded base URL for API requests in `src/services/api.js`:
+
 ```javascript
+// src/services/api.js
 const API_BASE_URL = 'http://localhost:8080/api'
 ```
 
-### CORS Settings
-Ensure your backend has CORS enabled for the frontend origin (e.g., `http://localhost:3000`).
+To point the frontend to another backend URL, update that constant in `src/services/api.js`.
+
+Tip: If you prefer to use environment variables (e.g. `VITE_API_URL`), you can change the file to read from `import.meta.env.VITE_API_URL` with a fallback.
+
+### CORS & Dev Proxy
+Vite is configured to proxy `/api` to `http://localhost:8080` during local development (see `vite.config.js`), which avoids CORS for `/api` calls when running the dev server. When deploying the frontend separately from the backend, ensure the backend enables CORS or that you configure a reverse proxy to avoid cross-origin issues.
 
 ## UI/UX Features
 
@@ -170,18 +176,18 @@ Ensure your backend has CORS enabled for the frontend origin (e.g., `http://loca
 ## Component Details
 
 ### UploadPage
-- **Features**: File selection, format validation, upload progress, result summary
-- **State Management**: File, loading, message, upload result
-- **Error Handling**: File validation, API error handling
+- Features: File selection via file input, format validation, simple loading indicator, result summary
+- State Management: File, loading, message, upload result
+- Error Handling: File validation, API error handling
 
 ### SearchPage
-- **Features**: Multi-filter search, pagination, responsive table
-- **State Management**: Filters, results, loading, error, search status
-- **Data Display**: Formatted timestamps, truncated text, rating display
+- Features: Multi-filter search, pagination, responsive table
+- State Management: Filters, results, loading, error, search status
+- Data Display: Formatted timestamps, truncated text, rating display
 
 ### Navigation
-- **Features**: Logo, navigation links, active route highlighting
-- **Responsive**: Hamburger menu on mobile (can be extended)
+- Features: Logo, navigation links, active route highlighting
+- Responsive: No hamburger menu yet; mobile layout is supported but a hamburger menu can be added later
 
 ## Testing
 
@@ -222,15 +228,13 @@ docker run -p 3000:80 customer-workbench-frontend
 
 ## Environment Variables
 
-Create a `.env` file in the project root:
+This project does not currently read an API URL from environment variables by default. If you'd like to configure the base API URL via an env var, add a `.env` file and update `src/services/api.js` to use `import.meta.env.VITE_API_URL` with a fallback. Example `.env` (optional):
+
 ```
 VITE_API_URL=http://localhost:8080/api
 ```
 
-Use in code:
-```javascript
-const API_BASE_URL = import.meta.env.VITE_API_URL
-```
+Then change `src/services/api.js` accordingly.
 
 ## Browser Support
 - Chrome (latest)
