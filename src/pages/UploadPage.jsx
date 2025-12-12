@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { uploadFile } from '../services/api'
 import './UploadPage.css'
 
@@ -8,19 +8,48 @@ function UploadPage() {
   const [message, setMessage] = useState('')
   const [messageType, setMessageType] = useState('')
   const [uploadResult, setUploadResult] = useState(null)
+  const [dragActive, setDragActive] = useState(false)
+  const fileInputRef = useRef(null)
+
+  const validateAndSetFile = (selectedFile) => {
+    if (!selectedFile) return false
+    const validTypes = ['text/csv', 'application/json', 'application/vnd.ms-excel']
+    if (validTypes.includes(selectedFile.type) || selectedFile.name.endsWith('.csv') || selectedFile.name.endsWith('.json')) {
+      setFile(selectedFile)
+      setMessage('')
+      return true
+    }
+
+    setMessage('Please select a CSV or JSON file')
+    setMessageType('error')
+    setFile(null)
+    return false
+  }
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0]
-    if (selectedFile) {
-      const validTypes = ['text/csv', 'application/json', 'application/vnd.ms-excel']
-      if (validTypes.includes(selectedFile.type) || selectedFile.name.endsWith('.csv') || selectedFile.name.endsWith('.json')) {
-        setFile(selectedFile)
-        setMessage('')
-      } else {
-        setMessage('Please select a CSV or JSON file')
-        setMessageType('error')
-        setFile(null)
-      }
+    validateAndSetFile(selectedFile)
+  }
+
+  const handleDragOver = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(true)
+  }
+
+  const handleDragLeave = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+  }
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+    const droppedFiles = e.dataTransfer?.files
+    if (droppedFiles && droppedFiles.length > 0) {
+      validateAndSetFile(droppedFiles[0])
     }
   }
 
@@ -66,10 +95,34 @@ function UploadPage() {
 
       <div className="upload-section">
         <form onSubmit={handleSubmit} className="upload-form">
+          <div
+            className={`dropzone ${dragActive ? 'active' : ''}`}
+            onDragOver={handleDragOver}
+            onDragEnter={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                fileInputRef.current?.click()
+              }
+            }}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {file ? (
+              <div className="dropzone-content">✓ {file.name}</div>
+            ) : (
+              <div className="dropzone-content">Drag & drop a CSV/JSON file here, or click to select</div>
+            )}
+          </div>
+
           <div className="form-group">
             <label htmlFor="file-input">Select File</label>
             <input
               id="file-input"
+              ref={fileInputRef}
               type="file"
               onChange={handleFileChange}
               accept=".csv,.json"

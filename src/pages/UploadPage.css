@@ -10,6 +10,32 @@
   margin-bottom: 1.5rem;
 }
 
+.dropzone {
+  border: 2px dashed var(--border-color);
+  border-radius: 6px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+  background: transparent;
+}
+
+.dropzone:hover {
+  border-color: var(--primary-color);
+  background-color: rgba(0, 82, 163, 0.03);
+}
+
+.dropzone.active {
+  border-color: var(--primary-color);
+  background-color: rgba(0, 82, 163, 0.06);
+}
+
+.dropzone-content {
+  color: var(--text-color);
+  font-size: 0.95rem;
+}
+
 .form-group {
   margin-bottom: 1.5rem;
 }
