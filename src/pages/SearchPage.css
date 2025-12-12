@@ -230,3 +230,178 @@
 .loading p {
   color: var(--light-text);
 }
+
+/* PrimeReact DataTable tweaks: increase row spacing and modernize paginator dropdown */
+.p-datatable .p-datatable-tbody > tr > td {
+  padding: 1.1rem 1.25rem; /* slightly larger cells for breathing room */
+  vertical-align: middle;
+}
+
+.p-datatable .p-datatable-tbody > tr {
+  background: #ffffff;
+  transition: background-color 0.15s ease, transform 0.08s ease;
+}
+
+.p-datatable .p-datatable-tbody > tr.p-highlight,
+.p-datatable .p-datatable-tbody > tr:hover {
+  background: #fbfdff; /* subtle hover/highlight */
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(16,24,40,0.03);
+}
+
+/* Add subtle separators with softer color */
+.p-datatable .p-datatable-tbody > tr > td {
+  border-bottom: 1px solid rgba(16,24,40,0.06);
+}
+
+/* Zebra striping: alternate rows white / light gray */
+.p-datatable .p-datatable-tbody > tr:nth-child(odd) > td {
+  background-color: #ffffff;
+}
+
+.p-datatable .p-datatable-tbody > tr:nth-child(even) > td {
+  background-color: #fbfbfc; /* soft light gray */
+}
+
+/* Ensure hover/highlight overrides the zebra background */
+.p-datatable .p-datatable-tbody > tr:hover > td,
+.p-datatable .p-datatable-tbody > tr.p-highlight > td {
+  background-color: #fbfdff;
+}
+
+/* Paginator styling: center-align numbers in dropdown and make it a little cleaner */
+.p-paginator {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+.p-paginator .p-dropdown,
+.p-paginator .p-paginator .p-dropdown {
+  min-width: 56px; /* ensure room for numbers */
+}
+
+.p-paginator .p-dropdown .p-dropdown-label,
+.p-paginator .p-dropdown .p-dropdown-item {
+  text-align: center; /* center numbers/text inside dropdown */
+}
+
+/* Increase vertical spacing between dropdown items (page size selector) */
+.p-paginator .p-dropdown .p-dropdown-items {
+  padding: 0.15rem 0; /* small padding around the list */
+}
+
+.p-paginator .p-dropdown .p-dropdown-item,
+.p-paginator .p-dropdown .p-dropdown-items .p-dropdown-item {
+  padding: 0.5rem 0.75rem; /* larger click/touch area and spacing */
+  line-height: 1.8; /* increase space between stacked numbers */
+  min-height: 28px;
+}
+
+/* Slightly larger font for clarity */
+.p-paginator .p-dropdown .p-dropdown-item {
+  font-size: 0.95rem;
+}
+
+/* Make paginator controls slightly more elevated */
+.p-paginator .p-paginator-first,
+.p-paginator .p-paginator-prev,
+.p-paginator .p-paginator-next,
+.p-paginator .p-paginator-last {
+  background: transparent;
+  border: 1px solid rgba(16,24,40,0.06);
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+}
+
+.p-paginator .p-paginator-page.p-highlight {
+  background: var(--primary-color);
+  color: #fff;
+  border-radius: 6px;
+  padding: 0.35rem 0.6rem;
+}
+
+/* Responsive: make table cells wrap nicely on small screens */
+@media (max-width: 640px) {
+  .p-datatable .p-datatable-tbody > tr > td {
+    padding: 0.75rem 0.75rem;
+    white-space: normal;
+  }
+}
+
+/* Make columns narrower and avoid horizontal scrolling */
+.p-datatable table {
+  table-layout: fixed; /* make widths respect column widths */
+}
+
+.p-datatable .p-datatable-thead > tr > th,
+.p-datatable .p-datatable-tbody > tr > td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Column width hints - adjust percentages to balance space */
+.p-datatable .p-datatable-thead > tr > th:nth-child(1),
+.p-datatable .p-datatable-tbody > tr > td:nth-child(1) {
+  width: 25%; /* Timestamp (reduced to make room for Customer ID) */
+}
+
+.p-datatable .p-datatable-thead > tr > th:nth-child(2),
+.p-datatable .p-datatable-tbody > tr > td:nth-child(2) {
+  width: 15%; /* Customer ID (increased so header fully visible) */
+}
+
+.p-datatable .p-datatable-thead > tr > th:nth-child(3),
+.p-datatable .p-datatable-tbody > tr > td:nth-child(3) {
+  width: 12%; /* Interaction Type */
+}
+/* After removing Rating column: set widths for remaining columns */
+.p-datatable .p-datatable-thead > tr > th:nth-child(4),
+.p-datatable .p-datatable-tbody > tr > td:nth-child(4) {
+  width: 26%; /* Feedback (adjusted) */
+}
+
+.p-datatable .p-datatable-thead > tr > th:nth-child(5),
+.p-datatable .p-datatable-tbody > tr > td:nth-child(5) {
+  width: 20%; /* Response */
+}
+
+/* Allow the Response column to wrap instead of truncating */
+.p-datatable .p-datatable-tbody > tr > td:nth-child(5) {
+  white-space: normal; /* allow wrapping */
+  overflow: visible;
+  text-overflow: clip;
+  word-break: break-word;
+  /* keep a sensible line-height and allow multiple lines */
+  line-height: 1.35;
+}
+
+/* On small screens, ensure response wraps nicely and doesn't break layout */
+@media (max-width: 640px) {
+  .p-datatable .p-datatable-tbody > tr > td:nth-child(5) {
+    white-space: normal;
+  }
+}
+
+/* On very small screens, allow wrapping to avoid overflow */
+@media (max-width: 480px) {
+  .p-datatable table,
+  .p-datatable .p-datatable-thead > tr > th,
+  .p-datatable .p-datatable-tbody > tr > td {
+    table-layout: auto;
+    white-space: normal;
+  }
+}
+
+/* Make header cells match body row height and vertical alignment */
+.p-datatable .p-datatable-thead > tr > th,
+.p-datatable .p-datatable-thead > tr > th .p-column-title {
+  padding: 1.1rem 1.25rem; /* same padding as body cells */
+  vertical-align: middle;
+  line-height: 1.2;
+}
+
+/* Prevent header text wrap so header maintains consistent height */
+.p-datatable .p-datatable-thead > tr > th {
+  white-space: nowrap;
+}

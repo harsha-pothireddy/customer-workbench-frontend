@@ -1,6 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { searchInteractions } from '../services/api'
 import './SearchPage.css'
+import { DataTable } from 'primereact/datatable'
+import { Column } from 'primereact/column'
+import { Dropdown } from 'primereact/dropdown'
+import { InputText } from 'primereact/inputtext'
 
 function SearchPage() {
   const [filters, setFilters] = useState({
@@ -9,7 +13,7 @@ function SearchPage() {
     startDate: '',
     endDate: '',
     page: 0,
-    size: 10,
+    size: 5,
   })
 
   const [results, setResults] = useState(null)
@@ -26,14 +30,13 @@ function SearchPage() {
     }))
   }
 
-  const handleSearch = async (e) => {
-    e.preventDefault()
+  const fetchResults = useCallback(async (currentFilters) => {
     setLoading(true)
     setError('')
     setHasSearched(true)
 
     try {
-      const response = await searchInteractions(filters)
+      const response = await searchInteractions(currentFilters)
       setResults(response.data)
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Search failed')
@@ -41,14 +44,41 @@ function SearchPage() {
     } finally {
       setLoading(false)
     }
+  }, [])
+
+  const handleSearch = (e) => {
+    e.preventDefault()
+    fetchResults(filters)
   }
 
-  const handlePageChange = (newPage) => {
-    setFilters(prev => ({
-      ...prev,
-      page: newPage,
-    }))
-    handleSearch({ preventDefault: () => {} })
+  const handlePageChange = (event) => {
+    const newFilters = {
+      ...filters,
+      page: event.page,
+      size: event.rows,
+    }
+    setFilters(newFilters)
+    fetchResults(newFilters)
+  }
+
+  const handleFilterChangeFromTable = (event) => {
+    // event.filters: { field: { value, matchMode } }
+    const tableFilters = event.filters || {}
+    const newFilters = { ...filters }
+
+    if (tableFilters.customerId && tableFilters.customerId.value !== undefined) {
+      newFilters.customerId = tableFilters.customerId.value
+    }
+
+    if (tableFilters.interactionType && tableFilters.interactionType.value !== undefined) {
+      newFilters.interactionType = tableFilters.interactionType.value
+    }
+
+    // For other columns like feedback we can map to a free-text search param if backend supports it
+
+    newFilters.page = 0
+    setFilters(newFilters)
+    fetchResults(newFilters)
   }
 
   const truncateText = (text, maxLength = 50) => {
@@ -64,7 +94,7 @@ function SearchPage() {
 
   return (
     <div className="container">
-      <h1>Search Customer Interactions</h1>
+  <h1>Search Customer Interactions</h1>
       <p className="subtitle">Search and filter customer interaction records</p>
 
       <form onSubmit={handleSearch} className="search-form">
@@ -148,68 +178,29 @@ function SearchPage() {
               ℹ No results found matching your criteria
             </div>
           ) : (
-            <>
-              <div className="table-wrapper">
-                <table className="results-table">
-                  <thead>
-                    <tr>
-                      <th>Timestamp</th>
-                      <th>Customer ID</th>
-                      <th>Interaction Type</th>
-                      <th>Rating</th>
-                      <th>Feedback</th>
-                      <th>Response</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {results.interactions.map((interaction) => (
-                      <tr key={interaction.id}>
-                        <td>{formatDate(interaction.timestamp)}</td>
-                        <td className="customer-id">{interaction.customerId}</td>
-                        <td>
-                          <span className={`badge badge-${interaction.interactionType}`}>
-                            {interaction.interactionType}
-                          </span>
-                        </td>
-                        <td className="rating">
-                          {interaction.customerRating ? `${interaction.customerRating}/5` : '-'}
-                        </td>
-                        <td className="feedback" title={interaction.feedback}>
-                          {truncateText(interaction.feedback, 40)}
-                        </td>
-                        <td className="response" title={interaction.responsesFromCustomerSupport}>
-                          {truncateText(interaction.responsesFromCustomerSupport, 40)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {results.totalPages > 1 && (
-                <div className="pagination">
-                  <button
-                    onClick={() => handlePageChange(results.currentPage - 1)}
-                    disabled={results.currentPage === 0}
-                    className="btn-page"
-                  >
-                    ← Previous
-                  </button>
-
-                  <span className="page-info">
-                    Page {results.currentPage + 1} of {results.totalPages}
-                  </span>
-
-                  <button
-                    onClick={() => handlePageChange(results.currentPage + 1)}
-                    disabled={results.currentPage >= results.totalPages - 1}
-                    className="btn-page"
-                  >
-                    Next →
-                  </button>
-                </div>
-              )}
-            </>
+            <div className="table-wrapper">
+              <DataTable
+                value={results.interactions}
+                lazy
+                paginator
+                first={results.currentPage * filters.size}
+                rows={filters.size}
+                totalRecords={results.totalElements}
+                onPage={handlePageChange}
+                onFilter={handleFilterChangeFromTable}
+                rowsPerPageOptions={[5,10,25,50]}
+                emptyMessage="No results found"
+              >
+                <Column field="timestamp" header="Timestamp" body={(row) => formatDate(row.timestamp)} sortable/>
+                <Column field="customerId" header="Customer ID" filter filterField="customerId"/>
+                <Column field="interactionType" header="Interaction Type" filter filterField="interactionType" filterElement={(options) => (
+                  <Dropdown value={options.value} options={[{label:'',value:''},{label:'email',value:'email'},{label:'chat',value:'chat'},{label:'ticket',value:'ticket'},{label:'feedback',value:'feedback'}]} onChange={(e) => options.filterCallback(e.value)} placeholder="Select"/>
+                )} />
+                
+                <Column field="feedback" header="Feedback" body={(row) => truncateText(row.feedback,40)} filter filterField="feedback"/>
+                <Column field="responsesFromCustomerSupport" header="Response" body={(row) => truncateText(row.responsesFromCustomerSupport,40)} />
+              </DataTable>
+            </div>
           )}
         </div>
       )}
