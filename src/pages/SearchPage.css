@@ -405,3 +405,25 @@
 .p-datatable .p-datatable-thead > tr > th {
   white-space: nowrap;
 }
+
+/* Hide browser default "--:-- --" / skeleton for empty datetime-local inputs
+   when the input's value is empty. Restore visible text when focused or
+   when a value is present. This targets WebKit-based browsers (Chrome/Safari)
+   where the datetime-local control exposes internal parts via pseudo-elements.
+   If other browsers need tweaks later we can extend selectors. */
+input[type="datetime-local"][value=""]::-webkit-datetime-edit,
+input[type="datetime-local"][value=""]::-webkit-datetime-edit-field,
+input[type="datetime-local"][value=""]::-webkit-datetime-edit-text {
+  color: transparent; /* hide the default skeleton text */
+}
+
+/* When focused, show the value text so the user can see what they're editing */
+input[type="datetime-local"]:focus::-webkit-datetime-edit,
+input[type="datetime-local"]:focus::-webkit-datetime-edit-field {
+  color: initial;
+}
+
+/* Fallback: ensure the input text color is normal when a value is present */
+input[type="datetime-local"]:not([value=""]) {
+  color: initial;
+}
