@@ -4,11 +4,89 @@ Modern React-based frontend for the Customer Insights Workbench application. It 
 
 ## Architecture
 
+### Visual Architecture Diagram
+
+```mermaid
+graph TB
+    subgraph "Frontend Application"
+        A[main.jsx<br/>App Entry Point] --> B[App.jsx<br/>Root Component]
+        B --> C[React Router]
+        C --> D[Navigation.jsx<br/>Header & Nav]
+        C --> E[UploadPage.jsx]
+        C --> F[SearchPage.jsx]
+
+        E --> G[api.js<br/>API Service]
+        F --> G
+
+        G --> H[Axios Instance<br/>API_BASE_URL]
+
+        subgraph "PrimeReact UI Components"
+            F --> I[DataTable]
+            F --> J[Column]
+            F --> K[Dropdown]
+            F --> L[InputText]
+        end
+    end
+
+    subgraph "Backend API"
+        H -->|POST /api/uploads| M[Upload Endpoint]
+        H -->|GET /api/interactions/search| N[Search Endpoint]
+    end
+
+    subgraph "Development Environment"
+        O[Vite Dev Server<br/>:3000] -.Proxy /api.-> P[Backend Server<br/>:8080]
+    end
+
+    style A fill:#e1f5ff
+    style B fill:#e1f5ff
+    style G fill:#fff4e1
+    style H fill:#fff4e1
+    style M fill:#e8f5e9
+    style N fill:#e8f5e9
+```
+
+### Data Flow Architecture
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant UploadPage
+    participant SearchPage
+    participant API
+    participant Backend
+
+    User->>UploadPage: Select/Drop CSV/JSON file
+    UploadPage->>UploadPage: Validate file type
+    UploadPage->>API: uploadFile(file)
+    API->>Backend: POST /api/uploads
+    Backend-->>API: Upload result
+    API-->>UploadPage: Response data
+    UploadPage-->>User: Display summary
+
+    User->>SearchPage: Enter search criteria
+    SearchPage->>API: searchInteractions(filters)
+    API->>Backend: GET /api/interactions/search
+    Backend-->>API: Paginated results
+    API-->>SearchPage: Response data
+    SearchPage-->>User: Display in DataTable
+
+    User->>SearchPage: Change page/filter
+    SearchPage->>API: searchInteractions(newFilters)
+    API->>Backend: GET /api/interactions/search
+    Backend-->>API: Updated results
+    API-->>SearchPage: Response data
+    SearchPage-->>User: Update table
+```
+
 ### Technology Stack
 - **Framework**: React 18.2
-- **Build Tool**: Vite
+- **Build Tool**: Vite 5
 - **HTTP Client**: Axios
 - **Routing**: React Router v6
+- **UI Components**: PrimeReact 10.9.7
+- **UI Utilities**: PrimeFlex 4.0
+- **Icons**: PrimeIcons 7.0
+- **Date Utilities**: date-fns 2.30
 - **Styling**: CSS3 with custom properties
 
 ### Project Structure
@@ -38,29 +116,35 @@ src/
 - Active route indicator
 
 #### 2. Upload Page
-- File upload via standard file input (CSV and JSON)
+- **Drag-and-drop zone** for intuitive file selection (CSV and JSON)
+- Standard file input as alternative upload method
 - Client-side file validation (by MIME type and filename)
-- Simple loading indicator during upload
+- Visual feedback for drag states (hover effects)
+- Loading indicator during upload
 - Success/error messages and upload summary
-- Format guide with examples
-
-> Note: There is currently no drag-and-drop area or byte-level upload progress indicator in the UI. These can be added later if desired.
+- Detailed format guide with CSV and JSON examples
+- Upload result summary with job ID and record counts
 
 #### 3. Search Page
-- Multi-criteria filtering:
+- **PrimeReact DataTable** with advanced features:
+  - Lazy loading and server-side pagination
+  - Column-level filtering (Customer ID, Interaction Type, Feedback)
+  - Sortable columns (Timestamp)
+  - Configurable rows per page (5, 10, 25, 50)
+  - Dropdown filters for interaction types
+- Multi-criteria search form:
   - Search by Customer ID
   - Filter by Interaction Type (Email, Chat, Ticket, Feedback)
-  - Filter by Date Range
-- Paginated results display
-- Responsive data table with:
-  - Timestamp
+  - Filter by Date Range (start and end datetime)
+- Responsive data display:
+  - Formatted timestamps (locale-aware)
   - Customer ID
-  - Interaction Type (with badges)
-  - Customer Rating
-  - Feedback (truncated)
-  - Support Response (truncated)
-- Loading states
-- Error handling
+  - Interaction Type (with dropdown filter)
+  - Feedback (truncated at 40 characters)
+  - Support Response (truncated at 40 characters)
+- Real-time search results with loading states
+- Comprehensive error handling and user feedback
+- Results summary showing total records and page info
 
 #### 4. API Integration
 - Centralized API client using axios, defined in `src/services/api.js`
@@ -135,16 +219,20 @@ Response example:
 ## Configuration
 
 ### Backend API URL
-The project currently uses a hardcoded base URL for API requests in `src/services/api.js`:
+The project reads the backend API URL from the `VITE_API_URL` environment variable, with a fallback to `http://localhost:8080/api`:
 
 ```javascript
 // src/services/api.js
-const API_BASE_URL = 'http://localhost:8080/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
 ```
 
-To point the frontend to another backend URL, update that constant in `src/services/api.js`.
+To configure a custom backend URL, create a `.env` file in the project root:
 
-Tip: If you prefer to use environment variables (e.g. `VITE_API_URL`), you can change the file to read from `import.meta.env.VITE_API_URL` with a fallback.
+```env
+VITE_API_URL=http://your-backend-url:port/api
+```
+
+For production builds, set this environment variable in your deployment platform (Vercel, Netlify, Docker, etc.).
 
 ### CORS & Dev Proxy
 Vite is configured to proxy `/api` to `http://localhost:8080` during local development (see `vite.config.js`), which avoids CORS for `/api` calls when running the dev server. When deploying the frontend separately from the backend, ensure the backend enables CORS or that you configure a reverse proxy to avoid cross-origin issues.
@@ -176,14 +264,30 @@ Vite is configured to proxy `/api` to `http://localhost:8080` during local devel
 ## Component Details
 
 ### UploadPage
-- Features: File selection via file input, format validation, simple loading indicator, result summary
-- State Management: File, loading, message, upload result
-- Error Handling: File validation, API error handling
+- **Features**:
+  - Drag-and-drop zone with visual feedback
+  - File selection via file input (accessible fallback)
+  - Format validation (CSV/JSON only)
+  - Loading indicator with disabled state
+  - Upload result summary with detailed statistics
+- **State Management**: File, loading, message type, upload result, drag active state
+- **Error Handling**: File type validation, API error handling with user-friendly messages
+- **Accessibility**: Keyboard navigation support for dropzone (Enter/Space to select files)
 
 ### SearchPage
-- Features: Multi-filter search, pagination, responsive table
-- State Management: Filters, results, loading, error, search status
-- Data Display: Formatted timestamps, truncated text, rating display
+- **Features**:
+  - PrimeReact DataTable with lazy loading
+  - Multi-criteria search form (Customer ID, Interaction Type, Date Range)
+  - Server-side pagination with configurable page sizes
+  - Column-level filtering and sorting
+  - Responsive table layout
+- **State Management**: Filters (customerId, interactionType, dates, page, size), results, loading, error, search status
+- **Data Display**:
+  - Formatted timestamps (locale-aware date/time)
+  - Truncated text for long feedback/responses (40 char limit)
+  - Interactive dropdown filters for interaction types
+  - Results summary with total count and page info
+- **Performance**: useCallback for memoized search function to prevent unnecessary re-renders
 
 ### Navigation
 - Features: Logo, navigation links, active route highlighting
@@ -228,13 +332,17 @@ docker run -p 3000:80 customer-workbench-frontend
 
 ## Environment Variables
 
-The project reads an API URL from the `VITE_API_URL` environment variable if provided, and falls back to `http://localhost:8080/api` otherwise. To configure a custom backend URL, create a `.env` file in the project root with:
+Create a `.env` file in the project root to configure environment-specific settings:
 
-```
+```env
+# Backend API URL (default: http://localhost:8080/api)
 VITE_API_URL=http://localhost:8080/api
+
+# For production deployments, set this to your production backend URL
+# Example: VITE_API_URL=https://api.yourcompany.com/api
 ```
 
-No code changes are required; `src/services/api.js` will use this value at runtime when you run the dev server or build the app with Vite.
+**Note**: Environment variables prefixed with `VITE_` are exposed to the client-side code and bundled during build. Never store sensitive credentials in these variables.
 
 ## Browser Support
 - Chrome (latest)
