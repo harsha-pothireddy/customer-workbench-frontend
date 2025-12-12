@@ -228,13 +228,13 @@ docker run -p 3000:80 customer-workbench-frontend
 
 ## Environment Variables
 
-This project does not currently read an API URL from environment variables by default. If you'd like to configure the base API URL via an env var, add a `.env` file and update `src/services/api.js` to use `import.meta.env.VITE_API_URL` with a fallback. Example `.env` (optional):
+The project reads an API URL from the `VITE_API_URL` environment variable if provided, and falls back to `http://localhost:8080/api` otherwise. To configure a custom backend URL, create a `.env` file in the project root with:
 
 ```
 VITE_API_URL=http://localhost:8080/api
 ```
 
-Then change `src/services/api.js` accordingly.
+No code changes are required; `src/services/api.js` will use this value at runtime when you run the dev server or build the app with Vite.
 
 ## Browser Support
 - Chrome (latest)
