@@ -18,4 +18,7 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false,
   },
+  resolve: {
+    extensions: ['.ts', '.tsx', '.js', '.jsx'],
+  },
 })

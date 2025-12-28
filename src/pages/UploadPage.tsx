@@ -1,49 +1,67 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, FormEvent, DragEvent, ChangeEvent, KeyboardEvent } from 'react'
 import { uploadFile } from '../services/api'
+import { MAX_FILE_SIZE, ALLOWED_FILE_TYPES, ALLOWED_FILE_EXTENSIONS } from '../constants/fileConstants'
+import type { UploadResponse } from '../types'
 import './UploadPage.css'
 
-function UploadPage() {
-  const [file, setFile] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
-  const [messageType, setMessageType] = useState('')
-  const [uploadResult, setUploadResult] = useState(null)
-  const [dragActive, setDragActive] = useState(false)
-  const fileInputRef = useRef(null)
+type MessageType = 'success' | 'error' | ''
 
-  const validateAndSetFile = (selectedFile) => {
+function UploadPage() {
+  const [file, setFile] = useState<File | null>(null)
+  const [loading, setLoading] = useState<boolean>(false)
+  const [message, setMessage] = useState<string>('')
+  const [messageType, setMessageType] = useState<MessageType>('')
+  const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null)
+  const [dragActive, setDragActive] = useState<boolean>(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const validateAndSetFile = (selectedFile: File | null): boolean => {
     if (!selectedFile) return false
-    const validTypes = ['text/csv', 'application/json', 'application/vnd.ms-excel']
-    if (validTypes.includes(selectedFile.type) || selectedFile.name.endsWith('.csv') || selectedFile.name.endsWith('.json')) {
-      setFile(selectedFile)
-      setMessage('')
-      return true
+
+    // Check file type
+    const isValidType = ALLOWED_FILE_TYPES.includes(selectedFile.type) ||
+      ALLOWED_FILE_EXTENSIONS.some(ext => selectedFile.name.toLowerCase().endsWith(ext))
+
+    if (!isValidType) {
+      setMessage('Please select a CSV or JSON file')
+      setMessageType('error')
+      setFile(null)
+      return false
     }
 
-    setMessage('Please select a CSV or JSON file')
-    setMessageType('error')
-    setFile(null)
-    return false
+    // Check file size
+    if (selectedFile.size > MAX_FILE_SIZE) {
+      const fileSizeMB = (selectedFile.size / (1024 * 1024)).toFixed(2)
+      const maxSizeMB = (MAX_FILE_SIZE / (1024 * 1024)).toFixed(0)
+      setMessage(`File size (${fileSizeMB}MB) exceeds maximum allowed size (${maxSizeMB}MB)`)
+      setMessageType('error')
+      setFile(null)
+      return false
+    }
+
+    setFile(selectedFile)
+    setMessage('')
+    return true
   }
 
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0]
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0] || null
     validateAndSetFile(selectedFile)
   }
 
-  const handleDragOver = (e) => {
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     e.stopPropagation()
     setDragActive(true)
   }
 
-  const handleDragLeave = (e) => {
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     e.stopPropagation()
     setDragActive(false)
   }
 
-  const handleDrop = (e) => {
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     e.stopPropagation()
     setDragActive(false)
@@ -53,7 +71,7 @@ function UploadPage() {
     }
   }
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
     if (!file) {
@@ -74,17 +92,27 @@ function UploadPage() {
         setMessageType('success')
         setUploadResult(data)
         setFile(null)
-        document.getElementById('file-input').value = ''
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''
+        }
       } else {
         setMessage(`✗ ${data.message}`)
         setMessageType('error')
       }
-    } catch (error) {
-      const errorMessage = error.response?.data?.message || error.message || 'Upload failed'
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { data?: { message?: string } }; message?: string }
+      const errorMessage = axiosError.response?.data?.message || axiosError.message || 'Upload failed'
       setMessage(`✗ Error: ${errorMessage}`)
       setMessageType('error')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      fileInputRef.current?.click()
     }
   }
 
@@ -103,12 +131,7 @@ function UploadPage() {
             onDrop={handleDrop}
             role="button"
             tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                fileInputRef.current?.click()
-              }
-            }}
+            onKeyDown={handleKeyDown}
             onClick={() => fileInputRef.current?.click()}
           >
             {file ? (
@@ -160,8 +183,8 @@ function UploadPage() {
             </div>
             <div className="result-row">
               <span className="label">Failed Records:</span>
-              <span className={uploadResult.failedRecords > 0 ? 'error-text' : 'success-text'}>
-                {uploadResult.failedRecords}
+              <span className={uploadResult.failedRecords && uploadResult.failedRecords > 0 ? 'error-text' : 'success-text'}>
+                {uploadResult.failedRecords || 0}
               </span>
             </div>
           </div>
@@ -197,3 +220,4 @@ PROD-001,CUST-002,4,"Good support",2025-12-10T11:00:00,"Appreciated!"`}</pre>
 }
 
 export default UploadPage
+
